@@ -8,10 +8,12 @@
     "start": "next start"
   },
   "dependencies": {
+    "archiver": "^7.0.1",
+    "csv-parse": "^5.3.6",
+    "multer": "^1.4.5-lts.1",
     "next": "13.4.0",
     "react": "18.2.0",
     "react-dom": "18.2.0",
-    "multer": "^1.4.5-lts.1",
-    "csv-parse": "^5.3.6"
+    "stream-buffers": "^3.0.3"
   }
 }

@@ -3,7 +3,6 @@
 
 import { useState } from 'react';
 import FileUpload from './FileUpload';
-import CSVColumnSelector from './CSVColumnSelector';
 import ProgressBar from './ProgressBar';
 import LogOutput from './LogOutput';
 
@@ -13,7 +12,6 @@ export default function TranslationForm() {
   const [specialFileType, setSpecialFileType] = useState('standaard');
   const [selectedLanguages, setSelectedLanguages] = useState([]);
   const [selectedFiles, setSelectedFiles] = useState([]);
-  const [selectedColumns, setSelectedColumns] = useState([]);
   const [logMessages, setLogMessages] = useState([]);
   const [progress, setProgress] = useState(0);
   const [isTranslating, setIsTranslating] = useState(false);
@@ -41,10 +39,6 @@ export default function TranslationForm() {
       alert('Selecteer ten minste één bestand.');
       return;
     }
-    if (fileType === 'csv' && selectedColumns.length === 0) {
-      alert('Selecteer ten minste één kolom om te vertalen.');
-      return;
-    }
 
     setIsTranslating(true);
     setLogMessages(prev => [...prev, "Vertaling gestart..."]);
@@ -57,19 +51,27 @@ export default function TranslationForm() {
     selectedFiles.forEach(file => {
       formData.append('files', file);
     });
-    if(fileType === 'csv'){
-      selectedColumns.forEach(col => {
-        formData.append('columns', col);
-      });
-    }
 
     try {
       const response = await fetch('/api/translate', {
         method: 'POST',
         body: formData,
       });
-      const result = await response.json();
-      setLogMessages(prev => [...prev, result.message]);
+      if (response.ok) {
+        // Ontvang de ZIP als blob en trigger download
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = "translated.zip";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setLogMessages(prev => [...prev, "Vertaling voltooid en bestand gedownload."]);
+      } else {
+        const result = await response.json();
+        setLogMessages(prev => [...prev, result.message]);
+      }
     } catch (error) {
       setLogMessages(prev => [...prev, "Er is een fout opgetreden: " + error.message]);
     } finally {
@@ -113,7 +115,7 @@ export default function TranslationForm() {
             name="fileType" 
             value="html" 
             checked={fileType === 'html'} 
-            onChange={() => { setFileType('html'); setSelectedFiles([]); setSelectedColumns([]); }} 
+            onChange={() => { setFileType('html'); setSelectedFiles([]); }} 
           />
           HTML bestanden
         </label>
@@ -124,7 +126,7 @@ export default function TranslationForm() {
             name="fileType" 
             value="csv" 
             checked={fileType === 'csv'} 
-            onChange={() => { setFileType('csv'); setSelectedFiles([]); setSelectedColumns([]); }} 
+            onChange={() => { setFileType('csv'); setSelectedFiles([]); }} 
           />
           CSV bestand
         </label>
@@ -185,10 +187,6 @@ export default function TranslationForm() {
         <legend>Bestand(en) selecteren</legend>
         <FileUpload fileType={fileType} setSelectedFiles={setSelectedFiles} />
       </fieldset>
-
-      {fileType === 'csv' && selectedFiles.length > 0 && (
-        <CSVColumnSelector csvFile={selectedFiles[0]} setSelectedColumns={setSelectedColumns} />
-      )}
 
       <button type="submit" disabled={isTranslating}>Vertaal</button>
       <ProgressBar progress={progress} />
